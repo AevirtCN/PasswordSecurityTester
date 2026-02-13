@@ -9,6 +9,7 @@ from tkinter import ttk, messagebox
 import threading
 from password_cracker import PasswordCracker
 from encryption_tester import EncryptionTester
+from utils.config import ConfigManager
 
 class SecurityTesterApp:
     def __init__(self, root):
@@ -16,6 +17,9 @@ class SecurityTesterApp:
         self.root.title("安全性测试工具")
         self.root.geometry("800x600")
         self.root.resizable(True, True)
+        
+        # 初始化配置管理器
+        self.config_manager = ConfigManager()
         
         # 创建主框架
         self.main_frame = ttk.Frame(self.root, padding="10")
@@ -37,10 +41,15 @@ class SecurityTesterApp:
         self.result_tab = ttk.Frame(self.notebook)
         self.notebook.add(self.result_tab, text="测试结果")
         
+        # 设置选项卡
+        self.settings_tab = ttk.Frame(self.notebook)
+        self.notebook.add(self.settings_tab, text="设置")
+        
         # 初始化选项卡内容
         self.init_password_tab()
         self.init_encryption_tab()
         self.init_result_tab()
+        self.init_settings_tab()
         
         # 禁用测试按钮
         self.start_password_test.config(state=tk.DISABLED)
@@ -289,6 +298,98 @@ class SecurityTesterApp:
     def clear_result(self):
         """清空结果"""
         self.result_text.delete(1.0, tk.END)
+    
+    def init_settings_tab(self):
+        """初始化设置选项卡"""
+        # 创建框架
+        frame = ttk.LabelFrame(self.settings_tab, text="设置", padding="10")
+        frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # 性能设置
+        perf_frame = ttk.LabelFrame(frame, text="性能设置", padding="10")
+        perf_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        # 多进程数量
+        ttk.Label(perf_frame, text="多进程数量:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        self.process_count = tk.IntVar(value=self.config_manager.get('performance.process_count', 4))
+        ttk.Entry(perf_frame, textvariable=self.process_count, width=10).grid(row=0, column=1, sticky=tk.W, pady=5)
+        
+        # 线程数量
+        ttk.Label(perf_frame, text="线程数量:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        self.thread_count = tk.IntVar(value=self.config_manager.get('performance.thread_count', 8))
+        ttk.Entry(perf_frame, textvariable=self.thread_count, width=10).grid(row=1, column=1, sticky=tk.W, pady=5)
+        
+        # 内存限制
+        ttk.Label(perf_frame, text="内存限制 (MB):").grid(row=2, column=0, sticky=tk.W, pady=5)
+        self.memory_limit = tk.IntVar(value=self.config_manager.get('performance.memory_limit', 1024))
+        ttk.Entry(perf_frame, textvariable=self.memory_limit, width=10).grid(row=2, column=1, sticky=tk.W, pady=5)
+        
+        # 缓存大小
+        ttk.Label(perf_frame, text="缓存大小:").grid(row=3, column=0, sticky=tk.W, pady=5)
+        self.cache_size = tk.IntVar(value=self.config_manager.get('performance.cache_size', 10000))
+        ttk.Entry(perf_frame, textvariable=self.cache_size, width=10).grid(row=3, column=1, sticky=tk.W, pady=5)
+        
+        # 批处理大小
+        ttk.Label(perf_frame, text="批处理大小:").grid(row=4, column=0, sticky=tk.W, pady=5)
+        self.batch_size = tk.IntVar(value=self.config_manager.get('performance.batch_size', 1000))
+        ttk.Entry(perf_frame, textvariable=self.batch_size, width=10).grid(row=4, column=1, sticky=tk.W, pady=5)
+        
+        # 分段数量
+        ttk.Label(perf_frame, text="分段数量:").grid(row=5, column=0, sticky=tk.W, pady=5)
+        self.segment_count = tk.IntVar(value=self.config_manager.get('performance.segment_count', 10))
+        ttk.Entry(perf_frame, textvariable=self.segment_count, width=10).grid(row=5, column=1, sticky=tk.W, pady=5)
+        
+        # UI设置
+        ui_frame = ttk.LabelFrame(frame, text="UI设置", padding="10")
+        ui_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        # 主题
+        ttk.Label(ui_frame, text="主题:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        self.theme = tk.StringVar(value=self.config_manager.get('ui.theme', 'light'))
+        ttk.Combobox(ui_frame, textvariable=self.theme, values=['light', 'dark'], width=15).grid(row=0, column=1, sticky=tk.W, pady=5)
+        
+        # 字体大小
+        ttk.Label(ui_frame, text="字体大小:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        self.font_size = tk.IntVar(value=self.config_manager.get('ui.font_size', 10))
+        ttk.Entry(ui_frame, textvariable=self.font_size, width=10).grid(row=1, column=1, sticky=tk.W, pady=5)
+        
+        # 安全设置
+        sec_frame = ttk.LabelFrame(frame, text="安全设置", padding="10")
+        sec_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        # 自动清除
+        self.auto_clear = tk.BooleanVar(value=self.config_manager.get('security.auto_clear', True))
+        ttk.Checkbutton(sec_frame, text="自动清除敏感信息", variable=self.auto_clear).grid(row=0, column=0, sticky=tk.W, pady=5)
+        
+        # 显示警告
+        self.show_warning = tk.BooleanVar(value=self.config_manager.get('security.show_warning', True))
+        ttk.Checkbutton(sec_frame, text="显示安全警告", variable=self.show_warning).grid(row=1, column=0, sticky=tk.W, pady=5)
+        
+        # 保存按钮
+        ttk.Button(frame, text="保存设置", command=self.save_settings).pack(pady=10)
+    
+    def save_settings(self):
+        """保存设置"""
+        try:
+            # 保存性能设置
+            self.config_manager.set('performance.process_count', self.process_count.get())
+            self.config_manager.set('performance.thread_count', self.thread_count.get())
+            self.config_manager.set('performance.memory_limit', self.memory_limit.get())
+            self.config_manager.set('performance.cache_size', self.cache_size.get())
+            self.config_manager.set('performance.batch_size', self.batch_size.get())
+            self.config_manager.set('performance.segment_count', self.segment_count.get())
+            
+            # 保存UI设置
+            self.config_manager.set('ui.theme', self.theme.get())
+            self.config_manager.set('ui.font_size', self.font_size.get())
+            
+            # 保存安全设置
+            self.config_manager.set('security.auto_clear', self.auto_clear.get())
+            self.config_manager.set('security.show_warning', self.show_warning.get())
+            
+            messagebox.showinfo("成功", "设置已保存")
+        except Exception as e:
+            messagebox.showerror("错误", f"保存设置出错: {e}")
 
 if __name__ == "__main__":
     root = tk.Tk()
