@@ -4,9 +4,16 @@
 加密方式测试模块
 """
 
+import sys
+import os
+
+# 添加当前目录到Python路径
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'utils'))
+
 import time
-from utils.wordlist import WordlistManager
-from utils.hashing import HashUtils
+from wordlist import WordlistManager
+from hashing import HashUtils
 
 class EncryptionTester:
     def __init__(self):

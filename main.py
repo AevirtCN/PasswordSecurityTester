@@ -8,14 +8,16 @@ import sys
 import os
 
 # 添加当前目录到Python路径
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, current_dir)
+sys.path.insert(0, os.path.join(current_dir, 'utils'))
 
 import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
 from password_cracker import PasswordCracker
 from encryption_tester import EncryptionTester
-from utils.config import ConfigManager
+from config import ConfigManager
 
 # 版本信息
 VERSION = "v0.1.3"
@@ -55,6 +57,14 @@ class SecurityTesterApp:
         self.strength_tab = ttk.Frame(self.notebook)
         self.notebook.add(self.strength_tab, text="密码强度评估")
         
+        # 压缩包测试选项卡
+        self.archive_tab = ttk.Frame(self.notebook)
+        self.notebook.add(self.archive_tab, text="压缩包密码测试")
+        
+        # 用户密码选项卡
+        self.user_tab = ttk.Frame(self.notebook)
+        self.notebook.add(self.user_tab, text="用户密码测试")
+        
         # 设置选项卡
         self.settings_tab = ttk.Frame(self.notebook)
         self.notebook.add(self.settings_tab, text="设置")
@@ -64,6 +74,8 @@ class SecurityTesterApp:
         self.init_encryption_tab()
         self.init_result_tab()
         self.init_strength_tab()
+        self.init_archive_tab()
+        self.init_user_tab()
         self.init_settings_tab()
         
         # 禁用测试按钮
@@ -420,6 +432,239 @@ class SecurityTesterApp:
         except Exception as e:
             messagebox.showerror("错误", f"保存设置出错: {e}")
     
+    def browse_archive_file(self):
+        """浏览选择压缩包文件"""
+        from tkinter import filedialog
+        file_path = filedialog.askopenfilename(
+            title="选择压缩包文件",
+            filetypes=[("压缩包文件", "*.zip *.rar *.7z *.tar.gz *.tgz"), ("所有文件", "*.*")]
+        )
+        if file_path:
+            self.archive_path.set(file_path)
+    
+    def browse_wordlist_file(self):
+        """浏览选择字典文件"""
+        from tkinter import filedialog
+        file_path = filedialog.askopenfilename(
+            title="选择字典文件",
+            filetypes=[("文本文件", "*.txt"), ("所有文件", "*.*")]
+        )
+        if file_path:
+            self.archive_wordlist.set(file_path)
+    
+    def start_archive_test(self):
+        """开始压缩包密码测试"""
+        archive_path = self.archive_path.get()
+        if not archive_path:
+            messagebox.showerror("错误", "请选择压缩包文件")
+            return
+        
+        # 清空结果
+        self.clear_result()
+        
+        # 添加测试信息
+        self.add_result(f"开始压缩包密码测试")
+        self.add_result(f"压缩包文件: {archive_path}")
+        
+        # 获取参数
+        method = self.archive_attack_method.get()
+        wordlist = self.archive_wordlist.get()
+        charset = self.archive_charset.get()
+        min_len = int(self.archive_min_length.get())
+        max_len = int(self.archive_max_length.get())
+        
+        self.add_result(f"攻击方式: {method}")
+        
+        # 创建线程
+        import threading
+        thread = threading.Thread(target=self.run_archive_test, args=(
+            archive_path, method, wordlist, charset, min_len, max_len
+        ))
+        thread.daemon = True
+        thread.start()
+    
+    def run_archive_test(self, archive_path, method, wordlist, charset, min_len, max_len):
+        """运行压缩包密码测试"""
+        try:
+            from archive_tester import ArchiveTester
+            tester = ArchiveTester()
+            
+            if method == "字典攻击":
+                # 使用内置字典
+                from wordlist import WordlistManager
+                wordlist_manager = WordlistManager()
+                password_list = wordlist_manager.get_wordlist(wordlist)
+                
+                # 遍历字典
+                attempts = 0
+                for password in password_list:
+                    password = password.strip()
+                    attempts += 1
+                    
+                    if tester.test_archive_password(archive_path, password):
+                        self.add_result(f"\n破解成功!")
+                        self.add_result(f"密码: {password}")
+                        self.add_result(f"尝试次数: {attempts}")
+                        return
+            else:  # 暴力破解
+                result = tester.brute_force_archive(archive_path, charset, min_len, max_len)
+                if result:
+                    self.add_result(f"\n破解成功!")
+                    self.add_result(f"密码: {result['password']}")
+                    self.add_result(f"尝试次数: {result['attempts']}")
+                    self.add_result(f"耗时: {result['time']:.2f} 秒")
+                    return
+            
+            self.add_result(f"\n破解失败，未找到匹配的密码")
+        except Exception as e:
+            self.add_result(f"\n测试过程中出错: {str(e)}")
+    
+    def test_user_password_strength(self):
+        """测试用户密码强度"""
+        username = self.user_username.get()
+        password = self.user_password.get()
+        
+        if not username:
+            messagebox.showerror("错误", "请输入用户名")
+            return
+        
+        if not password:
+            messagebox.showerror("错误", "请输入测试密码")
+            return
+        
+        # 清空结果
+        self.clear_result()
+        
+        # 添加测试信息
+        self.add_result(f"开始用户密码测试")
+        self.add_result(f"用户名: {username}")
+        
+        try:
+            from user_password import UserPasswordTester
+            tester = UserPasswordTester()
+            
+            # 测试密码强度
+            is_secure = tester.test_user_password(username, password)
+            
+            # 评估密码强度
+            from password_strength import PasswordStrength
+            strength_evaluator = PasswordStrength()
+            strength_result = strength_evaluator.evaluate(password)
+            
+            # 显示结果
+            self.add_result(f"\n密码强度评估结果:")
+            self.add_result(f"强度等级: {strength_result['strength']}")
+            self.add_result(f"强度评分: {strength_result['score']}/14")
+            
+            if is_secure:
+                self.add_result(f"\n密码强度符合要求")
+            else:
+                self.add_result(f"\n密码强度不符合要求")
+            
+            # 显示改进建议
+            if strength_result['suggestions']:
+                self.add_result(f"\n改进建议:")
+                for suggestion in strength_result['suggestions']:
+                    self.add_result(f"- {suggestion}")
+            
+        except Exception as e:
+            self.add_result(f"\n测试过程中出错: {str(e)}")
+    
+    def simulate_user_brute_force(self):
+        """模拟暴力破解用户密码"""
+        username = self.user_username.get()
+        
+        if not username:
+            messagebox.showerror("错误", "请输入用户名")
+            return
+        
+        # 清空结果
+        self.clear_result()
+        
+        # 添加测试信息
+        self.add_result(f"开始模拟暴力破解用户密码")
+        self.add_result(f"用户名: {username}")
+        
+        try:
+            from user_password import UserPasswordTester
+            tester = UserPasswordTester()
+            
+            # 获取参数
+            charset = self.user_charset.get()
+            min_len = int(self.user_min_length.get())
+            max_len = int(self.user_max_length.get())
+            
+            # 模拟暴力破解
+            result = tester.simulate_brute_force(username, charset, min_len, max_len)
+            
+            # 显示结果
+            self.add_result(f"\n模拟结果:")
+            self.add_result(f"字符集长度: {result['charset_length']}")
+            self.add_result(f"密码长度范围: {result['min_length']}-{result['max_length']}")
+            self.add_result(f"总尝试次数: {result['total_attempts']}")
+            self.add_result(f"预计破解时间: {result['estimated_time_formatted']}")
+            self.add_result(f"安全级别: {result['security_level']}")
+            
+            # 显示安全建议
+            evaluation = tester.evaluate_user_password_security(username)
+            if evaluation['security_tips']:
+                self.add_result(f"\n安全建议:")
+                for tip in evaluation['security_tips']:
+                    self.add_result(f"- {tip}")
+            
+        except Exception as e:
+            self.add_result(f"\n模拟过程中出错: {str(e)}")
+    
+    def test_user_password_with_netuser(self):
+        """使用net user命令测试用户密码"""
+        username = self.user_username.get()
+        password = self.user_password.get()
+        
+        if not username:
+            messagebox.showerror("错误", "请输入用户名")
+            return
+        
+        if not password:
+            messagebox.showerror("错误", "请输入测试密码")
+            return
+        
+        # 清空结果
+        self.clear_result()
+        
+        # 添加测试信息
+        self.add_result(f"开始使用net user命令测试用户密码")
+        self.add_result(f"用户名: {username}")
+        
+        try:
+            from user_password import UserPasswordTester
+            tester = UserPasswordTester()
+            
+            # 使用net user命令测试
+            result = tester.test_user_password_with_netuser(username, password)
+            
+            if result['success']:
+                self.add_result(f"\n测试结果:")
+                self.add_result(f"用户名: {result['username']}")
+                self.add_result(f"密码强度: {result['strength']}")
+                self.add_result(f"强度评分: {result['score']}/14")
+                if result['is_secure']:
+                    self.add_result(f"密码强度符合要求")
+                else:
+                    self.add_result(f"密码强度不符合要求")
+                
+                # 显示用户信息（部分）
+                self.add_result(f"\n用户信息:")
+                user_info_lines = result['user_info'].split('\n')
+                for line in user_info_lines[:10]:  # 只显示前10行
+                    if line.strip():
+                        self.add_result(f"{line.strip()}")
+            else:
+                self.add_result(f"\n测试失败:")
+                self.add_result(f"错误信息: {result['error']}")
+            
+        except Exception as e:
+            self.add_result(f"\n测试过程中出错: {str(e)}")
+    
     def init_strength_tab(self):
         """初始化密码强度评估选项卡"""
         # 创建框架
@@ -475,7 +720,7 @@ class SecurityTesterApp:
     
     def evaluate_password_strength(self):
         """评估密码强度"""
-        from utils.password_strength import PasswordStrength
+        from password_strength import PasswordStrength
         
         password = self.strength_password.get()
         strength_evaluator = PasswordStrength()
@@ -489,6 +734,99 @@ class SecurityTesterApp:
         self.suggestion_list.delete(0, tk.END)
         for suggestion in result['suggestions']:
             self.suggestion_list.insert(tk.END, suggestion)
+    
+    def init_archive_tab(self):
+        """初始化压缩包密码测试选项卡"""
+        # 创建框架
+        frame = ttk.LabelFrame(self.archive_tab, text="压缩包密码测试", padding="10")
+        frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # 压缩包路径
+        ttk.Label(frame, text="压缩包文件:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        self.archive_path = tk.StringVar()
+        ttk.Entry(frame, textvariable=self.archive_path, width=40).grid(row=0, column=1, sticky=tk.W, pady=5)
+        ttk.Button(frame, text="浏览", command=self.browse_archive_file).grid(row=0, column=2, sticky=tk.W, pady=5)
+        
+        # 攻击方式选择
+        ttk.Label(frame, text="攻击方式:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        self.archive_attack_method = ttk.Combobox(frame, values=["字典攻击", "暴力破解"], width=20)
+        self.archive_attack_method.current(0)
+        self.archive_attack_method.grid(row=1, column=1, sticky=tk.W, pady=5)
+        
+        # 字典文件
+        ttk.Label(frame, text="字典文件:").grid(row=2, column=0, sticky=tk.W, pady=5)
+        self.archive_wordlist = tk.StringVar(value="default")
+        ttk.Entry(frame, textvariable=self.archive_wordlist, width=40).grid(row=2, column=1, sticky=tk.W, pady=5)
+        ttk.Button(frame, text="浏览", command=self.browse_wordlist_file).grid(row=2, column=2, sticky=tk.W, pady=5)
+        
+        # 字符集
+        ttk.Label(frame, text="字符集:").grid(row=3, column=0, sticky=tk.W, pady=5)
+        self.archive_charset = tk.StringVar(value="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()")
+        ttk.Entry(frame, textvariable=self.archive_charset, width=60).grid(row=3, column=1, columnspan=2, sticky=tk.W, pady=5)
+        
+        # 最小长度
+        ttk.Label(frame, text="最小长度:").grid(row=4, column=0, sticky=tk.W, pady=5)
+        self.archive_min_length = tk.StringVar(value="4")
+        ttk.Entry(frame, textvariable=self.archive_min_length, width=10).grid(row=4, column=1, sticky=tk.W, pady=5)
+        
+        # 最大长度
+        ttk.Label(frame, text="最大长度:").grid(row=5, column=0, sticky=tk.W, pady=5)
+        self.archive_max_length = tk.StringVar(value="8")
+        ttk.Entry(frame, textvariable=self.archive_max_length, width=10).grid(row=5, column=1, sticky=tk.W, pady=5)
+        
+        # 测试按钮
+        ttk.Button(frame, text="开始测试", command=self.start_archive_test).grid(row=6, column=0, columnspan=3, pady=10)
+    
+    def init_user_tab(self):
+        """初始化用户密码测试选项卡"""
+        # 创建框架
+        frame = ttk.LabelFrame(self.user_tab, text="用户密码测试", padding="10")
+        frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # 获取用户列表
+        from user_password import UserPasswordTester
+        user_tester = UserPasswordTester()
+        users = user_tester.get_windows_users()
+        
+        # 用户名选择
+        ttk.Label(frame, text="用户名:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        self.user_username = tk.StringVar()
+        if users:
+            self.user_username.set(users[0])
+            user_combo = ttk.Combobox(frame, textvariable=self.user_username, values=users, width=20)
+        else:
+            user_combo = ttk.Entry(frame, textvariable=self.user_username, width=20)
+        user_combo.grid(row=0, column=1, sticky=tk.W, pady=5)
+        
+        # 密码输入
+        ttk.Label(frame, text="测试密码:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        self.user_password = tk.StringVar()
+        user_password_entry = ttk.Entry(frame, textvariable=self.user_password, width=40, show="*")
+        user_password_entry.grid(row=1, column=1, sticky=tk.W, pady=5)
+        
+        # 显示密码复选框
+        self.user_show_password = tk.BooleanVar()
+        ttk.Checkbutton(frame, text="显示密码", variable=self.user_show_password, command=lambda: self.toggle_password_visibility(user_password_entry)).grid(row=1, column=2, sticky=tk.W, pady=5)
+        
+        # 字符集
+        ttk.Label(frame, text="字符集:").grid(row=2, column=0, sticky=tk.W, pady=5)
+        self.user_charset = tk.StringVar(value="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()")
+        ttk.Entry(frame, textvariable=self.user_charset, width=60).grid(row=2, column=1, columnspan=2, sticky=tk.W, pady=5)
+        
+        # 最小长度
+        ttk.Label(frame, text="最小长度:").grid(row=3, column=0, sticky=tk.W, pady=5)
+        self.user_min_length = tk.StringVar(value="4")
+        ttk.Entry(frame, textvariable=self.user_min_length, width=10).grid(row=3, column=1, sticky=tk.W, pady=5)
+        
+        # 最大长度
+        ttk.Label(frame, text="最大长度:").grid(row=4, column=0, sticky=tk.W, pady=5)
+        self.user_max_length = tk.StringVar(value="8")
+        ttk.Entry(frame, textvariable=self.user_max_length, width=10).grid(row=4, column=1, sticky=tk.W, pady=5)
+        
+        # 测试按钮
+        ttk.Button(frame, text="测试密码强度", command=self.test_user_password_strength).grid(row=5, column=0, sticky=tk.W, pady=10)
+        ttk.Button(frame, text="使用net user测试", command=self.test_user_password_with_netuser).grid(row=5, column=1, sticky=tk.W, pady=10)
+        ttk.Button(frame, text="模拟暴力破解", command=self.simulate_user_brute_force).grid(row=6, column=0, columnspan=2, sticky=tk.W, pady=10)
 
 if __name__ == "__main__":
     root = tk.Tk()

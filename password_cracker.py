@@ -9,14 +9,17 @@ import os
 
 # 添加当前目录到Python路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), 'utils'))
 
 import hashlib
 import time
 import itertools
 import multiprocessing
-from utils.wordlist import WordlistManager
-from utils.hashing import HashUtils
-from utils.config import ConfigManager
+
+# 导入模块
+from wordlist import WordlistManager
+from hashing import HashUtils
+from config import ConfigManager
 
 class PasswordCracker:
     def __init__(self):
