@@ -4,6 +4,12 @@
 安全性测试工具主入口
 """
 
+import sys
+import os
+
+# 添加当前目录到Python路径
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
@@ -12,7 +18,7 @@ from encryption_tester import EncryptionTester
 from utils.config import ConfigManager
 
 # 版本信息
-VERSION = "v0.1.1"
+VERSION = "v0.1.2"
 RELEASE_DATE = "2026-02-13"
 
 class SecurityTesterApp:
@@ -107,7 +113,14 @@ class SecurityTesterApp:
         
         # 哈希算法选择
         ttk.Label(frame, text="哈希算法:").grid(row=7, column=0, sticky=tk.W, pady=5)
-        self.hash_algorithm = ttk.Combobox(frame, values=["md5", "sha1", "sha256", "sha512"], width=20)
+        self.hash_algorithm = ttk.Combobox(frame, values=[
+            "md5", "sha1", "sha224", "sha256", "sha384", "sha512",
+            "sha3_224", "sha3_256", "sha3_384", "sha3_512",
+            "blake2b", "blake2s", "md4", "ripemd160", "whirlpool",
+            "tiger192_3", "snefru", "gost", "adler32", "crc32",
+            "crc32b", "haval128_3", "haval160_3", "haval192_3",
+            "haval224_3", "haval256_3"
+        ], width=20)
         self.hash_algorithm.current(0)
         self.hash_algorithm.grid(row=7, column=1, sticky=tk.W, pady=5)
         
@@ -134,7 +147,14 @@ class SecurityTesterApp:
         
         # 单加密算法选择
         ttk.Label(frame, text="单加密算法:").grid(row=2, column=0, sticky=tk.W, pady=5)
-        self.single_algorithm = ttk.Combobox(frame, values=["md5", "sha1", "sha256", "sha512"], width=20)
+        self.single_algorithm = ttk.Combobox(frame, values=[
+            "md5", "sha1", "sha224", "sha256", "sha384", "sha512",
+            "sha3_224", "sha3_256", "sha3_384", "sha3_512",
+            "blake2b", "blake2s", "md4", "ripemd160", "whirlpool",
+            "tiger192_3", "snefru", "gost", "adler32", "crc32",
+            "crc32b", "haval128_3", "haval160_3", "haval192_3",
+            "haval224_3", "haval256_3"
+        ], width=20)
         self.single_algorithm.current(0)
         self.single_algorithm.grid(row=2, column=1, sticky=tk.W, pady=5)
         
