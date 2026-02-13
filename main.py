@@ -18,7 +18,7 @@ from encryption_tester import EncryptionTester
 from utils.config import ConfigManager
 
 # 版本信息
-VERSION = "v0.1.2"
+VERSION = "v0.1.3"
 RELEASE_DATE = "2026-02-13"
 
 class SecurityTesterApp:
@@ -51,6 +51,10 @@ class SecurityTesterApp:
         self.result_tab = ttk.Frame(self.notebook)
         self.notebook.add(self.result_tab, text="测试结果")
         
+        # 密码强度选项卡
+        self.strength_tab = ttk.Frame(self.notebook)
+        self.notebook.add(self.strength_tab, text="密码强度评估")
+        
         # 设置选项卡
         self.settings_tab = ttk.Frame(self.notebook)
         self.notebook.add(self.settings_tab, text="设置")
@@ -59,6 +63,7 @@ class SecurityTesterApp:
         self.init_password_tab()
         self.init_encryption_tab()
         self.init_result_tab()
+        self.init_strength_tab()
         self.init_settings_tab()
         
         # 禁用测试按钮
@@ -414,6 +419,76 @@ class SecurityTesterApp:
             messagebox.showinfo("成功", "设置已保存")
         except Exception as e:
             messagebox.showerror("错误", f"保存设置出错: {e}")
+    
+    def init_strength_tab(self):
+        """初始化密码强度评估选项卡"""
+        # 创建框架
+        frame = ttk.LabelFrame(self.strength_tab, text="密码强度评估", padding="10")
+        frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # 密码输入
+        ttk.Label(frame, text="请输入密码:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        self.strength_password = tk.StringVar()
+        password_entry = ttk.Entry(frame, textvariable=self.strength_password, width=40, show="*")
+        password_entry.grid(row=0, column=1, sticky=tk.W, pady=5)
+        
+        # 显示密码复选框
+        self.show_password = tk.BooleanVar()
+        ttk.Checkbutton(frame, text="显示密码", variable=self.show_password, command=lambda: self.toggle_password_visibility(password_entry)).grid(row=0, column=2, sticky=tk.W, pady=5)
+        
+        # 评估按钮
+        ttk.Button(frame, text="评估密码强度", command=self.evaluate_password_strength).grid(row=1, column=0, columnspan=3, pady=10)
+        
+        # 结果框架
+        result_frame = ttk.LabelFrame(frame, text="评估结果", padding="10")
+        result_frame.grid(row=2, column=0, columnspan=3, sticky=tk.W+tk.E, pady=5)
+        
+        # 强度等级
+        ttk.Label(result_frame, text="强度等级:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        self.strength_level = tk.StringVar(value="-")
+        ttk.Label(result_frame, textvariable=self.strength_level, font=("Arial", 10, "bold")).grid(row=0, column=1, sticky=tk.W, pady=5)
+        
+        # 强度评分
+        ttk.Label(result_frame, text="强度评分:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        self.strength_score = tk.StringVar(value="-")
+        ttk.Label(result_frame, textvariable=self.strength_score).grid(row=1, column=1, sticky=tk.W, pady=5)
+        
+        # 建议框架
+        suggestion_frame = ttk.LabelFrame(frame, text="改进建议", padding="10")
+        suggestion_frame.grid(row=3, column=0, columnspan=3, sticky=tk.W+tk.E+tk.N+tk.S, pady=5)
+        
+        # 建议列表
+        self.suggestion_list = tk.Listbox(suggestion_frame, width=60, height=8)
+        self.suggestion_list.pack(fill=tk.BOTH, expand=True, pady=5)
+        
+        # 添加滚动条
+        scrollbar = ttk.Scrollbar(self.suggestion_list, command=self.suggestion_list.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.suggestion_list.config(yscrollcommand=scrollbar.set)
+    
+    def toggle_password_visibility(self, entry):
+        """切换密码可见性"""
+        if self.show_password.get():
+            entry.config(show="")
+        else:
+            entry.config(show="*")
+    
+    def evaluate_password_strength(self):
+        """评估密码强度"""
+        from utils.password_strength import PasswordStrength
+        
+        password = self.strength_password.get()
+        strength_evaluator = PasswordStrength()
+        result = strength_evaluator.evaluate(password)
+        
+        # 更新结果
+        self.strength_level.set(result['strength'])
+        self.strength_score.set(f"{result['score']}/14")
+        
+        # 更新建议
+        self.suggestion_list.delete(0, tk.END)
+        for suggestion in result['suggestions']:
+            self.suggestion_list.insert(tk.END, suggestion)
 
 if __name__ == "__main__":
     root = tk.Tk()
