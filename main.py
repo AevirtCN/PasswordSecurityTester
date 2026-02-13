@@ -11,10 +11,14 @@ from password_cracker import PasswordCracker
 from encryption_tester import EncryptionTester
 from utils.config import ConfigManager
 
+# 版本信息
+VERSION = "v0.1.1"
+RELEASE_DATE = "2026-02-13"
+
 class SecurityTesterApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("安全性测试工具")
+        self.root.title(f"安全性测试工具 - {VERSION}")
         self.root.geometry("800x600")
         self.root.resizable(True, True)
         
